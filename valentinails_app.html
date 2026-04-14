@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Valentinails · Reserva tu hora</title>
+<style>
+  /* ── CONFIGURAR AQUÍ la URL del Apps Script deployment ── */
+  /* ver instrucciones en valentinails_backend.gs           */
+
+  :root {
+    --pink:       #c97ba8;
+    --pink-light: #fdf0f5;
+    --pink-dark:  #a0527c;
+    --bg:         #fff9fb;
+    --card:       #ffffff;
+    --text:       #2c1a22;
+    --muted:      #8c6878;
+    --border:     rgba(180,100,140,0.15);
+    --radius:     14px;
+    --radius-sm:  8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Georgia', serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 2rem 1rem 4rem;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 420px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  .logo {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: linear-gradient(135deg, #f9ccd9, #e8a4c4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin: 0 auto 12px;
+  }
+  .brand { font-size: 24px; color: var(--text); letter-spacing: -0.02em; }
+  .sub { font-size: 13px; color: var(--muted); margin-top: 4px; font-family: sans-serif; }
+
+  /* Progress */
+  .progress { display: flex; gap: 6px; margin-bottom: 1.75rem; }
+  .pip { height: 3px; border-radius: 2px; flex: 1; background: var(--border); transition: background 0.3s; }
+  .pip.done { background: var(--pink); }
+
+  /* Steps */
+  .step { display: none; animation: fadeIn 0.25s ease; }
+  .step.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .step-label {
+    font-size: 11px; font-family: sans-serif; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 14px;
+  }
+
+  /* Cards de selección */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+
+  .sel-card {
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 1rem; cursor: pointer; background: var(--card);
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  }
+  .sel-card:hover { border-color: var(--pink); background: var(--pink-light); transform: translateY(-1px); }
+  .sel-card.selected { border: 1.5px solid var(--pink); background: var(--pink-light); }
+
+  .sel-icon { font-size: 22px; margin-bottom: 6px; display: block; }
+  .sel-name { font-size: 14px; color: var(--text); font-family: sans-serif; font-weight: 500; }
+  .sel-detail { font-size: 12px; color: var(--muted); margin-top: 3px; font-family: sans-serif; }
+
+  /* Slots de hora */
+  .slots-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.5rem; }
+  .slot {
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 11px 4px; text-align: center; cursor: pointer;
+    font-size: 15px; color: var(--text); background: var(--card);
+    transition: border-color 0.15s, background 0.15s; font-family: sans-serif; font-weight: 500;
+  }
+  .slot:hover { background: var(--pink-light); border-color: var(--pink); }
+  .slot.selected { border: 1.5px solid var(--pink); background: var(--pink-light); color: var(--pink-dark); }
+  .slot.taken {
+    background: #f5f5f5; color: #bbb; text-decoration: line-through;
+    cursor: not-allowed; pointer-events: none;
+  }
+  .slot-loading { height: 44px; border-radius: var(--radius-sm); background: #f0f0f0; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  /* Form inputs */
+  .form-group { margin-bottom: 14px; }
+  .form-group label { font-size: 12px; font-family: sans-serif; color: var(--muted); display: block; margin-bottom: 5px; }
+  .form-group input {
+    width: 100%; padding: 11px 14px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 15px; font-family: sans-serif;
+    color: var(--text); background: var(--card); outline: none; transition: border-color 0.15s;
+  }
+  .form-group input:focus { border-color: var(--pink); }
+
+  /* Resumen */
+  .summary-card {
+    background: var(--pink-light); border: 1px solid rgba(180,100,140,0.2);
+    border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 1.5rem;
+  }
+  .summary-row { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; font-family: sans-serif; }
+  .summary-label { color: var(--muted); }
+  .summary-value { font-weight: 600; color: var(--text); }
+
+  /* Payment box */
+  .payment-box {
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 1rem 1.25rem; margin-bottom: 1.5rem; background: var(--card);
+  }
+  .payment-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 8px; font-family: sans-serif; }
+  .payment-detail { font-size: 13px; color: var(--muted); line-height: 1.7; font-family: sans-serif; }
+  .payment-detail strong { color: var(--text); }
+
+  /* Botones */
+  .btn {
+    width: 100%; padding: 13px; border-radius: var(--radius-sm); border: none;
+    font-size: 15px; cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+    font-family: sans-serif; font-weight: 500; letter-spacing: 0.01em;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--pink); color: white; }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-primary:disabled { background: #e0d0d8; color: #b0a0a8; cursor: not-allowed; transform: none; }
+  .btn-ghost {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); margin-top: 8px;
+  }
+  .btn-ghost:hover { background: var(--pink-light); }
+
+  /* Loading state */
+  .btn-loading { position: relative; pointer-events: none; }
+  .btn-loading::after {
+    content: ''; position: absolute; right: 14px; top: 50%;
+    transform: translateY(-50%); width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.4); border-top-color: white;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+
+  /* Success */
+  .success-wrap { text-align: center; padding: 1rem 0; }
+  .success-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: #e8f5e9; display: flex; align-items: center;
+    justify-content: center; font-size: 30px; margin: 0 auto 16px;
+  }
+  .success-title { font-size: 22px; color: var(--text); margin-bottom: 8px; }
+  .success-sub { font-size: 14px; color: var(--muted); line-height: 1.7; font-family: sans-serif; }
+  .success-id {
+    display: inline-block; background: var(--pink-light); color: var(--pink-dark);
+    border-radius: var(--radius-sm); padding: 4px 12px; font-size: 13px;
+    font-family: monospace; font-weight: 600; margin: 12px 0;
+  }
+
+  /* Error banner */
+  .error-banner {
+    background: #fff0f0; border: 1px solid #f5c0c0; border-radius: var(--radius-sm);
+    padding: 10px 14px; font-size: 13px; color: #c0392b;
+    font-family: sans-serif; margin-bottom: 14px; display: none;
+  }
+  .error-banner.visible { display: block; }
+
+  /* Warning de URL no configurada */
+  .dev-warning {
+    background: #fffbe6; border: 1px solid #ffe58f; border-radius: var(--radius-sm);
+    padding: 10px 14px; font-size: 12px; color: #7c5c00;
+    font-family: monospace; margin-bottom: 1rem; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ⚠️ ESTA ADVERTENCIA DESAPARECE CUANDO CONFIGURES LA URL ⚠️ -->
+  <div class="dev-warning" id="dev-warning">
+    ⚙️ MODO DEMO — Para activar la integración real:<br>
+    1. Sigue las instrucciones en <strong>valentinails_backend.gs</strong><br>
+    2. Reemplaza <code>TU_URL_DE_APPS_SCRIPT</code> en esta línea del HTML:<br>
+    <code>const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyoODg9InSGwKswI5ZXTBTOXslNtD2oY2kpUPBjljhAFb-qX76lLET4LjmiC_aDaLRE/exec";</code>
+  </div>
+
+  <div class="header">
+    <div class="logo">💅</div>
+    <div class="brand">Valentinails</div>
+    <div class="sub">Lo Prado · Reserva tu hora en línea</div>
+  </div>
+
+  <div class="progress" id="progress">
+    <div class="pip" id="p1"></div>
+    <div class="pip" id="p2"></div>
+    <div class="pip" id="p3"></div>
+    <div class="pip" id="p4"></div>
+    <div class="pip" id="p5"></div>
+  </div>
+
+  <!-- PASO 1: Servicio -->
+  <div class="step active" id="step1">
+    <div class="step-label">Paso 1 · Elige tu servicio</div>
+    <div class="grid-2">
+      <div class="sel-card" onclick="selectService('Uñas acrílicas', this)">
+        <span class="sel-icon">✨</span>
+        <div class="sel-name">Uñas acrílicas</div>
+        <div class="sel-detail">Diseño personalizado</div>
+      </div>
+      <div class="sel-card" onclick="selectService('Esmaltado permanente', this)">
+        <span class="sel-icon">💅</span>
+        <div class="sel-name">Esmaltado permanente</div>
+        <div class="sel-detail">Larga duración</div>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="btn1" disabled onclick="goStep(2)">Continuar →</button>
+  </div>
+
+  <!-- PASO 2: Día y hora -->
+  <div class="step" id="step2">
+    <div class="step-label">Paso 2 · Elige día y hora</div>
+    <div id="slots-error" class="error-banner"></div>
+    <div id="days-container"></div>
+    <button class="btn btn-primary" id="btn2" disabled onclick="goStep(3)">Continuar →</button>
+    <button class="btn btn-ghost" onclick="goStep(1)">← Atrás</button>
+  </div>
+
+  <!-- PASO 3: Tus datos -->
+  <div class="step" id="step3">
+    <div class="step-label">Paso 3 · Tus datos de contacto</div>
+    <div class="form-group">
+      <label>Tu nombre</label>
+      <input type="text" id="inp-nombre" placeholder="Ej: Camila González" oninput="checkForm3()">
+    </div>
+    <div class="form-group">
+      <label>Tu email (para recibir confirmación)</label>
+      <input type="email" id="inp-email" placeholder="Ej: camila@gmail.com" oninput="checkForm3()">
+    </div>
+    <div id="form-error" class="error-banner"></div>
+    <button class="btn btn-primary" id="btn3" disabled onclick="goStep(4)">Continuar →</button>
+    <button class="btn btn-ghost" onclick="goStep(2)">← Atrás</button>
+  </div>
+
+  <!-- PASO 4: Confirmar -->
+  <div class="step" id="step4">
+    <div class="step-label">Paso 4 · Confirma tu reserva</div>
+    <div class="summary-card">
+      <div class="summary-row"><span class="summary-label">Servicio</span><span class="summary-value" id="s-service">—</span></div>
+      <div class="summary-row"><span class="summary-label">Día</span><span class="summary-value" id="s-day">—</span></div>
+      <div class="summary-row"><span class="summary-label">Hora</span><span class="summary-value" id="s-time">—</span></div>
+      <div class="summary-row"><span class="summary-label">Nombre</span><span class="summary-value" id="s-nombre">—</span></div>
+    </div>
+    <div class="payment-box">
+      <div class="payment-title">💸 Abono para confirmar la hora</div>
+      <div class="payment-detail">
+        Transfiere <strong>$10.000</strong> a Valentina (te enviará los datos de pago por Instagram).<br><br>
+        Después envía el comprobante a <strong>@valentiinailss</strong> y tu hora queda confirmada.
+      </div>
+    </div>
+    <div id="reserve-error" class="error-banner"></div>
+    <button class="btn btn-primary" id="btn4" onclick="hacerReserva()">Reservar y enviar confirmación ✉️</button>
+    <button class="btn btn-ghost" onclick="goStep(3)">← Atrás</button>
+  </div>
+
+  <!-- PASO 5: Éxito -->
+  <div class="step" id="step5">
+    <div class="success-wrap">
+      <div class="success-icon">🌸</div>
+      <div class="success-title">¡Listo!</div>
+      <div class="success-sub">
+        Tu solicitud fue enviada.<br>
+        Tu código de reserva es:<br>
+        <span class="success-id" id="s-id">—</span><br>
+        Revisa tu email — te llegó la confirmación con los pasos para pagar el abono.<br><br>
+        Valentina también recibió un aviso y te espera en Lo Prado 💅
+      </div>
+      <br><br>
+      <button class="btn btn-primary" onclick="restart()" style="max-width:260px;margin:0 auto;display:block;">Hacer otra reserva</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── CONFIGURAR AQUÍ ────────────────────────────────────────
+const APPS_SCRIPT_URL = "TU_URL_DE_APPS_SCRIPT";
+// ──────────────────────────────────────────────────────────
+
+const IS_DEMO = APPS_SCRIPT_URL === "TU_URL_DE_APPS_SCRIPT";
+
+// Horarios de demo (se reemplazan con datos reales del Sheet)
+const DEMO_SLOTS = {
+  "Miércoles 15": [
+    { hora: "10:00", disponible: false },
+    { hora: "15:00", disponible: true  },
+    { hora: "18:00", disponible: false }
+  ],
+  "Jueves 16": [
+    { hora: "15:00", disponible: true  },
+    { hora: "18:00", disponible: false }
+  ]
+};
+
+let sel = { service: null, day: null, time: null };
+let slotsData = null;
+
+if (!IS_DEMO) document.getElementById('dev-warning').style.display = 'none';
+
+// ── Selección de servicio ──────────────────────────────────
+function selectService(name, el) {
+  document.querySelectorAll('.sel-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  sel.service = name;
+  document.getElementById('btn1').disabled = false;
+}
+
+// ── Navegación entre pasos ─────────────────────────────────
+function goStep(n) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step' + n).classList.add('active');
+  updateProgress(n);
+
+  if (n === 2) loadSlots();
+  if (n === 4) fillSummary();
+}
+
+function updateProgress(step) {
+  for (let i = 1; i <= 5; i++) {
+    document.getElementById('p' + i).classList.toggle('done', i < step);
+  }
+}
+
+// ── Carga horarios desde Apps Script (o demo) ──────────────
+async function loadSlots() {
+  const container = document.getElementById('days-container');
+  container.innerHTML = '';
+
+  // Skeletons de carga
+  container.innerHTML = `
+    <div style="margin-bottom:1rem">
+      <div class="slot-loading" style="width:120px;height:20px;border-radius:4px;margin-bottom:10px"></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1.5rem">
+        ${[1,2,3].map(()=>'<div class="slot-loading"></div>').join('')}
+      </div>
+    </div>`.repeat(2);
+
+  try {
+    let slots = DEMO_SLOTS;
+
+    if (!IS_DEMO) {
+      const res = await fetch(`${APPS_SCRIPT_URL}?action=getSlots`);
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error);
+      slots = json.slots;
+    }
+
+    slotsData = slots;
+    renderSlots(slots);
+  } catch (err) {
+    document.getElementById('slots-error').textContent = 'Error al cargar horarios: ' + err.message;
+    document.getElementById('slots-error').classList.add('visible');
+    if (IS_DEMO) renderSlots(DEMO_SLOTS);
+  }
+}
+
+function renderSlots(slots) {
+  const container = document.getElementById('days-container');
+  container.innerHTML = '';
+  sel.day = null; sel.time = null;
+  document.getElementById('btn2').disabled = true;
+
+  Object.entries(slots).forEach(([dia, horas]) => {
+    const section = document.createElement('div');
+    section.style.marginBottom = '1.25rem';
+
+    const title = document.createElement('div');
+    title.style.cssText = 'font-size:13px;font-family:sans-serif;font-weight:600;color:var(--text);margin-bottom:8px;';
+    title.textContent = dia;
+    section.appendChild(title);
+
+    const grid = document.createElement('div');
+    grid.className = 'slots-grid';
+
+    horas.forEach(({ hora, disponible }) => {
+      const s = document.createElement('div');
+      s.className = 'slot' + (!disponible ? ' taken' : '');
+      s.textContent = hora;
+      if (disponible) {
+        s.onclick = () => {
+          document.querySelectorAll('.slot').forEach(x => x.classList.remove('selected'));
+          s.classList.add('selected');
+          sel.day = dia;
+          sel.time = hora;
+          document.getElementById('btn2').disabled = false;
+        };
+      }
+      grid.appendChild(s);
+    });
+
+    section.appendChild(grid);
+    container.appendChild(section);
+  });
+}
+
+// ── Validación del formulario paso 3 ──────────────────────
+function checkForm3() {
+  const nombre = document.getElementById('inp-nombre').value.trim();
+  const email  = document.getElementById('inp-email').value.trim();
+  const ok     = nombre.length > 1 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  document.getElementById('btn3').disabled = !ok;
+}
+
+// ── Llenar resumen paso 4 ──────────────────────────────────
+function fillSummary() {
+  document.getElementById('s-service').textContent = sel.service;
+  document.getElementById('s-day').textContent     = sel.day;
+  document.getElementById('s-time').textContent    = sel.time;
+  document.getElementById('s-nombre').textContent  = document.getElementById('inp-nombre').value.trim();
+}
+
+// ── Hacer la reserva real ──────────────────────────────────
+async function hacerReserva() {
+  const btn = document.getElementById('btn4');
+  const errBanner = document.getElementById('reserve-error');
+  errBanner.classList.remove('visible');
+
+  const payload = {
+    action:         "reserve",
+    servicio:       sel.service,
+    dia:            sel.day,
+    hora:           sel.time,
+    nombreCliente:  document.getElementById('inp-nombre').value.trim(),
+    emailCliente:   document.getElementById('inp-email').value.trim()
+  };
+
+  // Modo demo: simular éxito
+  if (IS_DEMO) {
+    btn.classList.add('btn-loading');
+    btn.textContent = 'Enviando...';
+    await new Promise(r => setTimeout(r, 1800));
+    btn.classList.remove('btn-loading');
+    btn.textContent = 'Reservar y enviar confirmación ✉️';
+    document.getElementById('s-id').textContent = 'DEMO-' + Math.random().toString(36).substring(2,8).toUpperCase();
+    goStep(5);
+    return;
+  }
+
+  btn.classList.add('btn-loading');
+  btn.textContent = 'Enviando...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body:   JSON.stringify(payload)
+    });
+    const json = await res.json();
+
+    if (!json.ok) throw new Error(json.error);
+
+    document.getElementById('s-id').textContent = json.id;
+    goStep(5);
+  } catch (err) {
+    errBanner.textContent = err.message || 'Error al procesar la reserva. Intenta de nuevo.';
+    errBanner.classList.add('visible');
+    btn.classList.remove('btn-loading');
+    btn.textContent = 'Reservar y enviar confirmación ✉️';
+    btn.disabled = false;
+  }
+}
+
+// ── Reiniciar ──────────────────────────────────────────────
+function restart() {
+  sel = { service: null, day: null, time: null };
+  document.querySelectorAll('.sel-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('inp-nombre').value = '';
+  document.getElementById('inp-email').value  = '';
+  document.getElementById('btn1').disabled = true;
+  document.getElementById('btn3').disabled = true;
+  goStep(1);
+}
+
+// Iniciar
+updateProgress(1);
+</script>
+</body>
+</html>
