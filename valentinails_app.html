@@ -1,326 +1,131 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Valentinails · Reserva tu hora</title>
-<style>
-  :root {
-    --pink:       #c97ba8;
-    --pink-light: #fdf0f5;
-    --pink-dark:  #a0527c;
-    --bg:         #fff9fb;
-    --card:       #ffffff;
-    --text:       #2c1a22;
-    --muted:      #8c6878;
-    --border:     rgba(180,100,140,0.15);
-    --radius:     14px;
-    --radius-sm:  8px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Georgia', serif; background: var(--bg); min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 2rem 1rem 4rem; }
-  .app { width: 100%; max-width: 420px; }
-  .header { text-align: center; margin-bottom: 2rem; }
-  .logo { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #f9ccd9, #e8a4c4); display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 12px; }
-  .brand { font-size: 24px; color: var(--text); letter-spacing: -0.02em; }
-  .sub { font-size: 13px; color: var(--muted); margin-top: 4px; font-family: sans-serif; }
-  .progress { display: flex; gap: 6px; margin-bottom: 1.75rem; }
-  .pip { height: 3px; border-radius: 2px; flex: 1; background: var(--border); transition: background 0.3s; }
-  .pip.done { background: var(--pink); }
-  .step { display: none; animation: fadeIn 0.25s ease; }
-  .step.active { display: block; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-  .step-label { font-size: 11px; font-family: sans-serif; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
-  .sel-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; cursor: pointer; background: var(--card); transition: border-color 0.15s, background 0.15s, transform 0.1s; }
-  .sel-card:hover { border-color: var(--pink); background: var(--pink-light); transform: translateY(-1px); }
-  .sel-card.selected { border: 1.5px solid var(--pink); background: var(--pink-light); }
-  .sel-icon { font-size: 22px; margin-bottom: 6px; display: block; }
-  .sel-name { font-size: 14px; color: var(--text); font-family: sans-serif; font-weight: 500; }
-  .sel-detail { font-size: 12px; color: var(--muted); margin-top: 3px; font-family: sans-serif; }
-  .slots-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.5rem; }
-  .slot { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 11px 4px; text-align: center; cursor: pointer; font-size: 15px; color: var(--text); background: var(--card); transition: border-color 0.15s, background 0.15s; font-family: sans-serif; font-weight: 500; }
-  .slot:hover { background: var(--pink-light); border-color: var(--pink); }
-  .slot.selected { border: 1.5px solid var(--pink); background: var(--pink-light); color: var(--pink-dark); }
-  .slot.taken { background: #f5f5f5; color: #bbb; text-decoration: line-through; cursor: not-allowed; pointer-events: none; }
-  .slot-loading { height: 44px; border-radius: var(--radius-sm); background: #f0f0f0; animation: pulse 1.2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-  .form-group { margin-bottom: 14px; }
-  .form-group label { font-size: 12px; font-family: sans-serif; color: var(--muted); display: block; margin-bottom: 5px; }
-  .form-group input { width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 15px; font-family: sans-serif; color: var(--text); background: var(--card); outline: none; transition: border-color 0.15s; }
-  .form-group input:focus { border-color: var(--pink); }
-  .summary-card { background: var(--pink-light); border: 1px solid rgba(180,100,140,0.2); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
-  .summary-row { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; font-family: sans-serif; }
-  .summary-label { color: var(--muted); }
-  .summary-value { font-weight: 600; color: var(--text); }
-  .payment-box { border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 1.5rem; background: var(--card); }
-  .payment-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 8px; font-family: sans-serif; }
-  .payment-detail { font-size: 13px; color: var(--muted); line-height: 1.7; font-family: sans-serif; }
-  .payment-detail strong { color: var(--text); }
-  .btn { width: 100%; padding: 13px; border-radius: var(--radius-sm); border: none; font-size: 15px; cursor: pointer; transition: opacity 0.15s, transform 0.1s; font-family: sans-serif; font-weight: 500; }
-  .btn:active { transform: scale(0.98); }
-  .btn-primary { background: var(--pink); color: white; }
-  .btn-primary:hover { opacity: 0.88; }
-  .btn-primary:disabled { background: #e0d0d8; color: #b0a0a8; cursor: not-allowed; transform: none; }
-  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); margin-top: 8px; }
-  .btn-ghost:hover { background: var(--pink-light); }
-  .btn-loading { position: relative; pointer-events: none; opacity: 0.8; }
-  .error-banner { background: #fff0f0; border: 1px solid #f5c0c0; border-radius: var(--radius-sm); padding: 10px 14px; font-size: 13px; color: #c0392b; font-family: sans-serif; margin-bottom: 14px; display: none; }
-  .error-banner.visible { display: block; }
-  .success-wrap { text-align: center; padding: 1rem 0; }
-  .success-icon { width: 64px; height: 64px; border-radius: 50%; background: #e8f5e9; display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 16px; }
-  .success-title { font-size: 22px; color: var(--text); margin-bottom: 8px; }
-  .success-sub { font-size: 14px; color: var(--muted); line-height: 1.7; font-family: sans-serif; }
-  .success-id { display: inline-block; background: var(--pink-light); color: var(--pink-dark); border-radius: var(--radius-sm); padding: 4px 12px; font-size: 13px; font-family: monospace; font-weight: 600; margin: 12px 0; }
-</style>
-</head>
-<body>
-<div class="app">
-  <div class="header">
-    <div class="logo">💅</div>
-    <div class="brand">Valentinails</div>
-    <div class="sub">Lo Prado · Reserva tu hora en línea</div>
-  </div>
+const SHEET_ID    = "1DL_hZTTkjxJJOtLZOZ_mTpzNkOw1zUCbt8gIV-4ZgkrZXDLdstntkUHF";
+const EMAIL_DUENA  = "abozts@gmail.com";
+const NOMBRE_DUENA = "Valentina";
 
-  <div class="progress" id="progress">
-    <div class="pip" id="p1"></div>
-    <div class="pip" id="p2"></div>
-    <div class="pip" id="p3"></div>
-    <div class="pip" id="p4"></div>
-    <div class="pip" id="p5"></div>
-  </div>
-
-  <div class="step active" id="step1">
-    <div class="step-label">Paso 1 · Elige tu servicio</div>
-    <div class="grid-2">
-      <div class="sel-card" onclick="selectService('Uñas acrílicas', this)">
-        <span class="sel-icon">✨</span>
-        <div class="sel-name">Uñas acrílicas</div>
-        <div class="sel-detail">Diseño personalizado</div>
-      </div>
-      <div class="sel-card" onclick="selectService('Esmaltado permanente', this)">
-        <span class="sel-icon">💅</span>
-        <div class="sel-name">Esmaltado permanente</div>
-        <div class="sel-detail">Larga duración</div>
-      </div>
-    </div>
-    <button class="btn btn-primary" id="btn1" disabled onclick="goStep(2)">Continuar →</button>
-  </div>
-
-  <div class="step" id="step2">
-    <div class="step-label">Paso 2 · Elige día y hora</div>
-    <div id="slots-error" class="error-banner"></div>
-    <div id="days-container"></div>
-    <button class="btn btn-primary" id="btn2" disabled onclick="goStep(3)">Continuar →</button>
-    <button class="btn btn-ghost" onclick="goStep(1)">← Atrás</button>
-  </div>
-
-  <div class="step" id="step3">
-    <div class="step-label">Paso 3 · Tus datos de contacto</div>
-    <div class="form-group">
-      <label>Tu nombre</label>
-      <input type="text" id="inp-nombre" placeholder="Ej: Camila González" oninput="checkForm3()">
-    </div>
-    <div class="form-group">
-      <label>Tu email (para recibir confirmación)</label>
-      <input type="email" id="inp-email" placeholder="Ej: camila@gmail.com" oninput="checkForm3()">
-    </div>
-    <div id="form-error" class="error-banner"></div>
-    <button class="btn btn-primary" id="btn3" disabled onclick="goStep(4)">Continuar →</button>
-    <button class="btn btn-ghost" onclick="goStep(2)">← Atrás</button>
-  </div>
-
-  <div class="step" id="step4">
-    <div class="step-label">Paso 4 · Confirma tu reserva</div>
-    <div class="summary-card">
-      <div class="summary-row"><span class="summary-label">Servicio</span><span class="summary-value" id="s-service">—</span></div>
-      <div class="summary-row"><span class="summary-label">Día</span><span class="summary-value" id="s-day">—</span></div>
-      <div class="summary-row"><span class="summary-label">Hora</span><span class="summary-value" id="s-time">—</span></div>
-      <div class="summary-row"><span class="summary-label">Nombre</span><span class="summary-value" id="s-nombre">—</span></div>
-    </div>
-    <div class="payment-box">
-      <div class="payment-title">💸 Abono para confirmar la hora</div>
-      <div class="payment-detail">
-        Transfiere <strong>$10.000</strong> a Valentina (te enviará los datos por Instagram).<br><br>
-        Envía el comprobante a <strong>@valentiinailss</strong> y tu hora queda confirmada.
-      </div>
-    </div>
-    <div id="reserve-error" class="error-banner"></div>
-    <button class="btn btn-primary" id="btn4" onclick="hacerReserva()">Reservar y enviar confirmación ✉️</button>
-    <button class="btn btn-ghost" onclick="goStep(3)">← Atrás</button>
-  </div>
-
-  <div class="step" id="step5">
-    <div class="success-wrap">
-      <div class="success-icon">🌸</div>
-      <div class="success-title">¡Listo!</div>
-      <div class="success-sub">
-        Tu solicitud fue enviada.<br>
-        Tu código de reserva es:<br>
-        <span class="success-id" id="s-id">—</span><br>
-        Revisa tu email con los pasos para pagar el abono.<br><br>
-        Valentina también recibió un aviso y te espera en Lo Prado 💅
-      </div>
-      <br><br>
-      <button class="btn btn-primary" onclick="restart()" style="max-width:260px;margin:0 auto;display:block;">Hacer otra reserva</button>
-    </div>
-  </div>
-</div>
-
-<script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyoODg9InSGwKswI5ZXTBTOXslNtD2oY2kpUPBjljhAFb-qX76lLET4LjmiC_aDaLRE/exec";
-
-let sel = { service: null, day: null, time: null };
-
-// JSONP helper — evita CORS
-function jsonp(url) {
-  return new Promise((resolve, reject) => {
-    const cbName = '_cb_' + Date.now();
-    const script = document.createElement('script');
-    const timeout = setTimeout(() => {
-      delete window[cbName];
-      document.body.removeChild(script);
-      reject(new Error('Timeout'));
-    }, 10000);
-    window[cbName] = (data) => {
-      clearTimeout(timeout);
-      delete window[cbName];
-      document.body.removeChild(script);
-      resolve(data);
-    };
-    script.src = url + '&callback=' + cbName;
-    script.onerror = () => { clearTimeout(timeout); reject(new Error('Error de red')); };
-    document.body.appendChild(script);
-  });
-}
-
-function selectService(name, el) {
-  document.querySelectorAll('.sel-card').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  sel.service = name;
-  document.getElementById('btn1').disabled = false;
-}
-
-function goStep(n) {
-  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-  document.getElementById('step' + n).classList.add('active');
-  updateProgress(n);
-  if (n === 2) loadSlots();
-  if (n === 4) fillSummary();
-}
-
-function updateProgress(step) {
-  for (let i = 1; i <= 5; i++)
-    document.getElementById('p' + i).classList.toggle('done', i < step);
-}
-
-async function loadSlots() {
-  const container = document.getElementById('days-container');
-  container.innerHTML = '<div style="font-family:sans-serif;font-size:14px;color:var(--muted);padding:1rem 0">Cargando horarios...</div>';
-  document.getElementById('slots-error').classList.remove('visible');
+function doGet(e) {
+  const callback = e.parameter.callback;
+  const action   = e.parameter.action;
+  let result;
 
   try {
-    const json = await jsonp(APPS_SCRIPT_URL + '?action=getSlots');
-    if (!json.ok) throw new Error(json.error);
-    renderSlots(json.slots);
+    if (action === "getSlots") {
+      result = getAvailableSlots();
+    } else if (action === "reserve") {
+      result = makeReservation(e.parameter);
+    } else {
+      result = { ok: false, error: "Acción no reconocida" };
+    }
   } catch (err) {
-    document.getElementById('slots-error').textContent = 'Error al cargar horarios: ' + err.message;
-    document.getElementById('slots-error').classList.add('visible');
-    container.innerHTML = '';
+    result = { ok: false, error: err.message };
   }
+
+  if (callback) {
+    return ContentService
+      .createTextOutput(callback + "(" + JSON.stringify(result) + ")")
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
-function renderSlots(slots) {
-  const container = document.getElementById('days-container');
-  container.innerHTML = '';
-  sel.day = null; sel.time = null;
-  document.getElementById('btn2').disabled = true;
+function doPost(e) {
+  let result;
+  try {
+    const data = JSON.parse(e.postData.contents);
+    if (data.action === "reserve") {
+      result = makeReservation(data);
+    } else {
+      result = { ok: false, error: "Acción no reconocida" };
+    }
+  } catch (err) {
+    result = { ok: false, error: err.message };
+  }
 
-  Object.entries(slots).forEach(([dia, horas]) => {
-    const section = document.createElement('div');
-    section.style.marginBottom = '1.25rem';
-    const title = document.createElement('div');
-    title.style.cssText = 'font-size:13px;font-family:sans-serif;font-weight:600;color:var(--text);margin-bottom:8px;';
-    title.textContent = dia;
-    section.appendChild(title);
-    const grid = document.createElement('div');
-    grid.className = 'slots-grid';
-    horas.forEach(({ hora, disponible }) => {
-      const s = document.createElement('div');
-      s.className = 'slot' + (!disponible ? ' taken' : '');
-      s.textContent = hora;
-      if (disponible) {
-        s.onclick = () => {
-          document.querySelectorAll('.slot').forEach(x => x.classList.remove('selected'));
-          s.classList.add('selected');
-          sel.day = dia; sel.time = hora;
-          document.getElementById('btn2').disabled = false;
-        };
+  return ContentService
+    .createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getAvailableSlots() {
+  const ss    = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName("Horarios");
+  const rows  = sheet.getDataRange().getValues();
+  const slots = {};
+
+  for (let i = 1; i < rows.length; i++) {
+    const dia        = rows[i][0];
+    const hora       = rows[i][1];
+    const disponible = rows[i][2];
+    if (!slots[dia]) slots[dia] = [];
+    slots[dia].push({ hora, disponible });
+  }
+
+  return { ok: true, slots };
+}
+
+function makeReservation(data) {
+  const { servicio, dia, hora, nombreCliente, emailCliente } = data;
+
+  if (!servicio || !dia || !hora || !nombreCliente || !emailCliente) {
+    return { ok: false, error: "Faltan datos en la reserva" };
+  }
+
+  const ss             = SpreadsheetApp.openById(SHEET_ID);
+  const horariosSheet  = ss.getSheetByName("Horarios");
+  const horariosData   = horariosSheet.getDataRange().getValues();
+
+  let filaHorario = -1;
+  for (let i = 1; i < horariosData.length; i++) {
+    if (horariosData[i][0] === dia && String(horariosData[i][1]) === String(hora)) {
+      filaHorario = i + 1;
+      if (!horariosData[i][2]) {
+        return { ok: false, error: "Lo sentimos, esa hora ya fue reservada. Elige otra." };
       }
-      grid.appendChild(s);
-    });
-    section.appendChild(grid);
-    container.appendChild(section);
-  });
-}
-
-function checkForm3() {
-  const nombre = document.getElementById('inp-nombre').value.trim();
-  const email  = document.getElementById('inp-email').value.trim();
-  document.getElementById('btn3').disabled = !(nombre.length > 1 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
-}
-
-function fillSummary() {
-  document.getElementById('s-service').textContent = sel.service;
-  document.getElementById('s-day').textContent     = sel.day;
-  document.getElementById('s-time').textContent    = sel.time;
-  document.getElementById('s-nombre').textContent  = document.getElementById('inp-nombre').value.trim();
-}
-
-async function hacerReserva() {
-  const btn = document.getElementById('btn4');
-  const errBanner = document.getElementById('reserve-error');
-  errBanner.classList.remove('visible');
-  btn.classList.add('btn-loading');
-  btn.textContent = 'Enviando...';
-  btn.disabled = true;
-
-  const nombre = document.getElementById('inp-nombre').value.trim();
-  const email  = document.getElementById('inp-email').value.trim();
-
-  const url = APPS_SCRIPT_URL
-    + '?action=reserve'
-    + '&servicio='       + encodeURIComponent(sel.service)
-    + '&dia='            + encodeURIComponent(sel.day)
-    + '&hora='           + encodeURIComponent(sel.time)
-    + '&nombreCliente='  + encodeURIComponent(nombre)
-    + '&emailCliente='   + encodeURIComponent(email);
-
-  try {
-    const json = await jsonp(url);
-    if (!json.ok) throw new Error(json.error);
-    document.getElementById('s-id').textContent = json.id;
-    goStep(5);
-  } catch (err) {
-    errBanner.textContent = err.message || 'Error al procesar. Intenta de nuevo.';
-    errBanner.classList.add('visible');
-    btn.classList.remove('btn-loading');
-    btn.textContent = 'Reservar y enviar confirmación ✉️';
-    btn.disabled = false;
+      break;
+    }
   }
+
+  if (filaHorario === -1) {
+    return { ok: false, error: "Hora no encontrada en el sistema" };
+  }
+
+  horariosSheet.getRange(filaHorario, 3).setValue(false);
+
+  const reservasSheet = ss.getSheetByName("Reservas");
+  const id            = Utilities.getUuid().substring(0, 8).toUpperCase();
+  const timestamp     = new Date().toLocaleString("es-CL", { timeZone: "America/Santiago" });
+  reservasSheet.appendRow([id, timestamp, servicio, dia, hora, nombreCliente, emailCliente, "Pendiente abono"]);
+
+  enviarEmailDuena({ id, servicio, dia, hora, nombreCliente, emailCliente });
+  enviarEmailClienta({ id, servicio, dia, hora, nombreCliente, emailCliente });
+
+  return { ok: true, id };
 }
 
-function restart() {
-  sel = { service: null, day: null, time: null };
-  document.querySelectorAll('.sel-card').forEach(c => c.classList.remove('selected'));
-  document.getElementById('inp-nombre').value = '';
-  document.getElementById('inp-email').value  = '';
-  document.getElementById('btn1').disabled = true;
-  document.getElementById('btn3').disabled = true;
-  goStep(1);
+function enviarEmailDuena({ id, servicio, dia, hora, nombreCliente, emailCliente }) {
+  const asunto = "Nueva reserva #" + id + " — " + nombreCliente;
+  const cuerpo = "Hola " + NOMBRE_DUENA + "!\n\nTienes una nueva reserva pendiente de abono:\n\n" +
+    "ID: #" + id + "\nServicio: " + servicio + "\nDía: " + dia + "\nHora: " + hora +
+    "\nCliente: " + nombreCliente + "\nEmail: " + emailCliente +
+    "\n\nLa hora quedó bloqueada en el Sheet.\n\n¡Éxito! 🌸";
+  MailApp.sendEmail({ to: EMAIL_DUENA, subject: asunto, body: cuerpo });
 }
 
-updateProgress(1);
-</script>
-</body>
-</html>
+function enviarEmailClienta({ id, servicio, dia, hora, nombreCliente, emailCliente }) {
+  const asunto = "Tu hora en Valentinails — #" + id;
+  const cuerpo = "Hola " + nombreCliente + "!\n\nTu solicitud fue recibida.\n\n" +
+    "Servicio: " + servicio + "\nDía: " + dia + "\nHora: " + hora + "\nID: #" + id +
+    "\n\nPara confirmar tu hora transfiere $10.000 y envía el comprobante a @valentiinailss en Instagram." +
+    "\n\n¡Te esperamos en Lo Prado! 🌸";
+  MailApp.sendEmail({ to: emailCliente, subject: asunto, body: cuerpo });
+}
+
+function testReserva() {
+  const r = makeReservation({
+    servicio: "Uñas acrílicas", dia: "Miércoles 15", hora: "15:00",
+    nombreCliente: "Test", emailCliente: "abozts@gmail.com"
+  });
+  Logger.log(JSON.stringify(r));
+}
